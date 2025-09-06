@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takeaway - Speaker Upload</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 3rem;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--foreground);">Takeaway</h1>
+            <p style="font-size: 1.125rem; color: var(--muted-foreground);">Upload your presentation materials for attendees</p>
+        </header>
+
+        <main>
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Upload Your Presentation</h2>
+                
+                <!-- Upload Area -->
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1.25rem;">Drop your files here</h3>
+                    <p style="color: var(--muted-foreground); margin-bottom: 1.5rem;">
+                        or <span style="color: var(--primary); font-weight: 600;">browse to choose files</span>
+                    </p>
+                    <p style="font-size: 0.875rem; color: var(--muted-foreground);">
+                        Supports PDF, PowerPoint, and video files up to 50MB
+                    </p>
+                </div>
+
+                <input type="file" id="fileInput" class="file-input" accept=".pdf,.ppt,.pptx,.mp4,.avi,.mov,.wmv" />
+
+                <!-- Progress Bar -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+
+                <!-- Upload Button -->
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button type="button" class="btn btn-primary" id="uploadBtn" disabled>
+                        <span id="uploadBtnText">Select a file to upload</span>
+                        <div class="spinner" id="uploadSpinner" style="display: none;"></div>
+                    </button>
+                </div>
+
+                <!-- Notifications -->
+                <div class="notification success" id="successNotification">
+                    <strong>Success!</strong> Your file has been uploaded successfully.
+                </div>
+
+                <div class="notification error" id="errorNotification">
+                    <strong>Error!</strong> <span id="errorMessage">Something went wrong. Please try again.</span>
+                </div>
+
+                <!-- File Info Display -->
+                <div class="file-info" id="fileInfo">
+                    <h4 id="fileName">File Name</h4>
+                    <div class="file-meta" id="fileMeta">Size • Type • Upload Time</div>
+                    <div class="file-summary" id="fileSummary">AI-generated summary will appear here...</div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="attendee.html" class="btn btn-secondary">
+                    View Attendee Page
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <script src="speaker.js"></script>
+</body>
+</html>
