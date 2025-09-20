@@ -13,7 +13,106 @@
             <p style="font-size: 1.125rem; color: var(--muted-foreground);">Upload your presentation materials for attendees</p>
         </header>
 
-        <main>
+        <!-- Added login form that shows when not authenticated -->
+        <div class="card" id="loginCard">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Speaker Login</h2>
+            
+            <form id="loginForm">
+                <div style="margin-bottom: 1rem;">
+                    <label for="username" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Username</label>
+                    <input type="text" id="username" name="username" required 
+                           style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 1rem;">
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="password" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Password</label>
+                    <input type="password" id="password" name="password" required 
+                           style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 1rem;">
+                </div>
+                
+                <div style="text-align: center;">
+                    <button type="submit" class="btn btn-primary" id="loginBtn">
+                        <span id="loginBtnText">Login</span>
+                        <div class="spinner" id="loginSpinner" style="display: none;"></div>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Login Error Notification -->
+            <div class="notification error" id="loginErrorNotification">
+                <strong>Error!</strong> <span id="loginErrorMessage">Invalid credentials. Please try again.</span>
+            </div>
+        </div>
+
+        <!-- Added main upload interface that shows when authenticated -->
+        <main id="uploadInterface" style="display: none;">
+            <!-- Added user info and logout button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 1rem; background: var(--muted); border-radius: 0.5rem;">
+                <div>
+                    <span style="font-weight: 600;">Welcome, </span>
+                    <span id="userDisplayName">Speaker</span>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button type="button" class="btn btn-secondary" id="generateLinkBtn">
+                        Generate Shareable Link
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="logoutBtn">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Added event configuration section -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem; font-size: 1.25rem;">Event Configuration</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="eventName" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Event Name</label>
+                        <input type="text" id="eventName" placeholder="Enter event name" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.25rem;">
+                    </div>
+                    <div>
+                        <label for="eventStatus" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Status</label>
+                        <select id="eventStatus" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.25rem;">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="startDate" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Start Date</label>
+                        <input type="datetime-local" id="startDate" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.25rem;">
+                    </div>
+                    <div>
+                        <label for="endDate" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">End Date</label>
+                        <input type="datetime-local" id="endDate" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.25rem;">
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button type="button" class="btn btn-primary" id="updateEventBtn">
+                        Update Event Configuration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Added shareable link display section -->
+            <div class="card" id="shareableLinkCard" style="margin-bottom: 2rem; display: none;">
+                <h3 style="margin-bottom: 1rem; font-size: 1.25rem;">Shareable Link</h3>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <input type="text" id="shareableLinkUrl" readonly 
+                           style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.25rem; background: var(--muted);">
+                    <button type="button" class="btn btn-secondary" id="copyLinkBtn">
+                        Copy Link
+                    </button>
+                </div>
+                <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--muted-foreground);">
+                    Share this link with attendees to give them access to your presentation materials.
+                </p>
+            </div>
+
             <div class="card">
                 <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Upload Your Presentation</h2>
                 
