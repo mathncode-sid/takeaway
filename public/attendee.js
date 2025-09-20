@@ -3,22 +3,52 @@ class AttendeeView {
     this.apiUrl = "http://localhost:3001/api"
     this.files = []
     this.filteredFiles = []
+    this.shareableLinkToken = window.SHAREABLE_LINK_TOKEN || this.getShareableLinkFromUrl()
+    this.isShareableLinkAccess = !!this.shareableLinkToken
     this.initializeElements()
     this.attachEventListeners()
-    this.loadFiles()
+    this.checkEventAccess()
+  }
+
+  getShareableLinkFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.get("link")
   }
 
   initializeElements() {
+    // Event status elements
+    this.eventStatus = document.getElementById("eventStatus")
+    this.eventStatusText = document.getElementById("eventStatusText")
+
+    // Access error elements
+    this.accessErrorState = document.getElementById("accessErrorState")
+    this.accessErrorTitle = document.getElementById("accessErrorTitle")
+    this.accessErrorMessage = document.getElementById("accessErrorMessage")
+    this.accessErrorActions = document.getElementById("accessErrorActions")
+
+    // Main interface elements
+    this.searchFilterCard = document.getElementById("searchFilterCard")
     this.searchInput = document.getElementById("searchInput")
     this.filterSelect = document.getElementById("filterSelect")
     this.refreshBtn = document.getElementById("refreshBtn")
     this.loadingState = document.getElementById("loadingState")
     this.emptyState = document.getElementById("emptyState")
     this.filesGrid = document.getElementById("filesGrid")
+
+    // Navigation elements
+    this.speakerLinkContainer = document.getElementById("speakerLinkContainer")
+    this.speakerNavContainer = document.getElementById("speakerNavContainer")
+
+    // Modal elements
     this.previewModal = document.getElementById("previewModal")
     this.previewTitle = document.getElementById("previewTitle")
     this.previewContent = document.getElementById("previewContent")
     this.closePreview = document.getElementById("closePreview")
+
+    if (this.isShareableLinkAccess) {
+      if (this.speakerLinkContainer) this.speakerLinkContainer.style.display = "none"
+      if (this.speakerNavContainer) this.speakerNavContainer.style.display = "none"
+    }
   }
 
   attachEventListeners() {
@@ -57,19 +87,130 @@ class AttendeeView {
     })
   }
 
+  async checkEventAccess() {
+    try {
+      // First check event status
+      const statusResponse = await fetch(`${this.apiUrl}/event/status`)
+      const statusResult = await statusResponse.json()
+
+      if (statusResponse.ok && statusResult.event) {
+        this.displayEventStatus(statusResult.event)
+
+        // If event is accessible, load files
+        if (statusResult.event.status === "active") {
+          this.loadFiles()
+        } else {
+          this.showAccessError(statusResult.event)
+        }
+      } else {
+        this.showAccessError({ status: "error" })
+      }
+    } catch (error) {
+      console.error("Error checking event access:", error)
+      this.showAccessError({ status: "error" })
+    }
+  }
+
+  displayEventStatus(event) {
+    let statusClass = ""
+    let statusText = ""
+
+    switch (event.status) {
+      case "active":
+        statusClass = "background: var(--primary); color: var(--primary-foreground);"
+        statusText = `${event.name} - Event Active`
+        break
+      case "not-started":
+        statusClass = "background: var(--muted); color: var(--muted-foreground);"
+        statusText = `${event.name} - Starts ${new Date(event.startDate).toLocaleString()}`
+        break
+      case "ended":
+        statusClass = "background: var(--destructive); color: var(--destructive-foreground);"
+        statusText = `${event.name} - Event Ended`
+        break
+      case "inactive":
+        statusClass = "background: var(--muted); color: var(--muted-foreground);"
+        statusText = `${event.name} - Event Inactive`
+        break
+    }
+
+    this.eventStatus.style.cssText += statusClass
+    this.eventStatusText.textContent = statusText
+    this.eventStatus.style.display = "block"
+  }
+
+  showAccessError(event) {
+    this.hideMainInterface()
+    this.accessErrorState.style.display = "block"
+
+    switch (event.status) {
+      case "not-started":
+        this.accessErrorTitle.textContent = "Event Not Started"
+        this.accessErrorMessage.textContent = `This event will begin on ${new Date(event.startDate).toLocaleString()}.`
+        this.accessErrorActions.innerHTML = `
+          <button type="button" class="btn btn-secondary" onclick="location.reload()">
+            Check Again
+          </button>
+        `
+        break
+      case "ended":
+        this.accessErrorTitle.textContent = "Event Ended"
+        this.accessErrorMessage.textContent = `This event ended on ${new Date(event.endDate).toLocaleString()}.`
+        this.accessErrorActions.innerHTML = ""
+        break
+      case "inactive":
+        this.accessErrorTitle.textContent = "Event Inactive"
+        this.accessErrorMessage.textContent = "This event is currently inactive."
+        this.accessErrorActions.innerHTML = ""
+        break
+      default:
+        this.accessErrorTitle.textContent = "Access Error"
+        this.accessErrorMessage.textContent = "Unable to access event content at this time."
+        this.accessErrorActions.innerHTML = `
+          <button type="button" class="btn btn-secondary" onclick="location.reload()">
+            Try Again
+          </button>
+        `
+    }
+  }
+
+  hideMainInterface() {
+    this.searchFilterCard.style.display = "none"
+    this.loadingState.style.display = "none"
+    this.emptyState.style.display = "none"
+    this.filesGrid.style.display = "none"
+    document.getElementById("navigationContainer").style.display = "none"
+  }
+
+  showMainInterface() {
+    this.searchFilterCard.style.display = "block"
+    document.getElementById("navigationContainer").style.display = "block"
+    this.accessErrorState.style.display = "none"
+  }
+
   async loadFiles() {
     try {
       this.showLoading()
+      this.showMainInterface()
 
-      const response = await fetch(`${this.apiUrl}/files`)
-      const files = await response.json()
+      const url = this.shareableLinkToken
+        ? `${this.apiUrl}/files?link=${this.shareableLinkToken}`
+        : `${this.apiUrl}/files`
+
+      const response = await fetch(url)
+      const result = await response.json()
 
       if (response.ok) {
-        this.files = files
-        this.filteredFiles = [...files]
+        this.files = result
+        this.filteredFiles = [...result]
         this.renderFiles()
       } else {
-        throw new Error("Failed to load files")
+        // Handle specific error cases
+        if (result.eventStatus) {
+          this.showAccessError({ status: result.eventStatus, startDate: result.startDate, endDate: result.endDate })
+        } else {
+          throw new Error(result.error || "Failed to load files")
+        }
       }
     } catch (error) {
       console.error("Error loading files:", error)
@@ -206,10 +347,12 @@ class AttendeeView {
     try {
       this.previewTitle.textContent = originalName
 
+      const linkParam = this.shareableLinkToken ? `?link=${this.shareableLinkToken}` : ""
+
       if (fileType === "pdf") {
         this.previewContent.innerHTML = `
           <iframe 
-            src="${this.apiUrl}/files/${filename}" 
+            src="${this.apiUrl}/files/${filename}${linkParam}" 
             style="width: 100%; height: 600px; border: none; border-radius: var(--radius);"
             title="PDF Preview">
           </iframe>
@@ -220,7 +363,7 @@ class AttendeeView {
             controls 
             style="width: 100%; max-height: 600px; border-radius: var(--radius);"
             preload="metadata">
-            <source src="${this.apiUrl}/files/${filename}" type="video/mp4">
+            <source src="${this.apiUrl}/files/${filename}${linkParam}" type="video/mp4">
             Your browser does not support the video tag.
           </video>
         `
@@ -250,8 +393,10 @@ class AttendeeView {
   }
 
   downloadFile(filename, originalName) {
+    const linkParam = this.shareableLinkToken ? `&link=${this.shareableLinkToken}` : ""
+
     const link = document.createElement("a")
-    link.href = `${this.apiUrl}/files/${filename}`
+    link.href = `${this.apiUrl}/files/${filename}?download=true${linkParam}`
     link.download = originalName
     document.body.appendChild(link)
     link.click()
