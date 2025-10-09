@@ -7,6 +7,11 @@ import session from "express-session"
 import { randomBytes } from "crypto"
 import { generateDetailedSummary } from "./lib/aiSummaryGenerator.js"
 import { put, list, del } from "@vercel/blob"
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express()
 const PORT = process.env.PORT || 3001
