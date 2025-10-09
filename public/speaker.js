@@ -1,6 +1,6 @@
 class SpeakerUpload {
   constructor() {
-    this.apiUrl = "http://localhost:3001/api"
+  this.apiUrl = "/api"
     this.selectedFile = null
     this.currentUser = null
     this.initializeElements()
