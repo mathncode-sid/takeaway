@@ -1,6 +1,6 @@
 class AttendeeView {
   constructor() {
-    this.apiUrl = "http://localhost:3001/api"
+  this.apiUrl = "/api"
     this.files = []
     this.filteredFiles = []
     this.shareableLinkToken = window.SHAREABLE_LINK_TOKEN || this.getShareableLinkFromUrl()
