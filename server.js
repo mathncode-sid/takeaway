@@ -6,7 +6,7 @@ import cors from "cors"
 import session from "express-session"
 import { randomBytes } from "crypto"
 import { generateDetailedSummary } from "./lib/aiSummaryGenerator.js"
-import { put, list, del } from "@vercel/blob"
+import { listBlobs, putBlob, isUsingVercel } from './lib/blobClient.js'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -304,11 +304,12 @@ function getBaseUrl(req) {
 
 async function loadMetadataFromBlob() {
   try {
-    const { blobs } = await list()
-    const metadataBlob = blobs.find((blob) => blob.pathname.includes("metadata.json"))
+    const { blobs } = await listBlobs()
+    const metadataBlob = blobs.find((blob) => (blob.pathname || '').includes("metadata.json"))
 
     if (metadataBlob) {
-      const response = await fetch(metadataBlob.url)
+      const url = metadataBlob.url && metadataBlob.url.startsWith('/') ? `http://localhost:${PORT}${metadataBlob.url}` : metadataBlob.url
+      const response = await fetch(url)
       const data = await response.json()
       filesMetadata = data
     }
@@ -321,7 +322,7 @@ async function saveMetadataToBlob() {
   try {
     const metadataJson = JSON.stringify(filesMetadata, null, 2)
     const blob = new Blob([metadataJson], { type: "application/json" })
-    await put("takeaway-metadata.json", blob, { access: "public" })
+    await putBlob("takeaway-metadata.json", blob, { access: "public" })
   } catch (error) {
     console.error("Error saving metadata to Blob:", error)
   }
@@ -411,7 +412,7 @@ app.post("/api/upload", authenticateSession, upload.single("file"), async (req, 
     const timestamp = Date.now()
     const filename = `${timestamp}-${req.file.originalname}`
 
-    const blob = await put(filename, req.file.buffer, {
+    const blob = await putBlob(filename, req.file.buffer, {
       access: "public",
       contentType: req.file.mimetype,
     })
@@ -588,6 +589,10 @@ app.use((error, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Takeaway server running on http://localhost:${PORT}`)
-  console.log(`Using Vercel Blob for file storage`)
+  try {
+    console.log(isUsingVercel() ? `Using Vercel Blob for file storage` : `Using local_blob for file storage (no BLOB_READ_WRITE_TOKEN)`)
+  } catch (err) {
+    console.log(`Using local_blob for file storage (detection failed)`) 
+  }
   console.log(`Default speaker credentials: username="speaker", password="password123"`)
 })
