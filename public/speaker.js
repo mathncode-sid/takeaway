@@ -2,7 +2,6 @@ class SpeakerUpload {
   constructor() {
     this.apiUrl = "http://localhost:3001/api"
     this.selectedFile = null
-    this.authToken = localStorage.getItem("speakerToken")
     this.currentUser = null
     this.initializeElements()
     this.attachEventListeners()
@@ -128,18 +127,10 @@ class SpeakerUpload {
   }
 
   async checkAuthStatus() {
-    if (!this.authToken) {
-      this.showLoginForm()
-      return
-    }
-
     try {
       const response = await fetch(`${this.apiUrl}/auth/verify`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.authToken}`,
-          "Content-Type": "application/json",
-        },
+        method: "GET",
+        credentials: "include",
       })
 
       const result = await response.json()
@@ -150,8 +141,6 @@ class SpeakerUpload {
         this.loadEventConfiguration()
         this.loadShareableLink()
       } else {
-        localStorage.removeItem("speakerToken")
-        this.authToken = null
         this.showLoginForm()
       }
     } catch (error) {
@@ -177,15 +166,14 @@ class SpeakerUpload {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       })
 
       const result = await response.json()
 
       if (response.ok && result.success) {
-        this.authToken = result.token
         this.currentUser = result.user
-        localStorage.setItem("speakerToken", this.authToken)
         this.showUploadInterface()
         this.loadEventConfiguration()
         this.loadShareableLink()
@@ -200,9 +188,16 @@ class SpeakerUpload {
     }
   }
 
-  handleLogout() {
-    localStorage.removeItem("speakerToken")
-    this.authToken = null
+  async handleLogout() {
+    try {
+      await fetch(`${this.apiUrl}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
+
     this.currentUser = null
     this.showLoginForm()
   }
@@ -272,9 +267,9 @@ class SpeakerUpload {
       const response = await fetch(`${this.apiUrl}/event/configure`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${this.authToken}`,
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(eventData),
       })
 
@@ -296,9 +291,9 @@ class SpeakerUpload {
       const response = await fetch(`${this.apiUrl}/event/generate-link`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${this.authToken}`,
           "Content-Type": "application/json",
         },
+        credentials: "include",
       })
 
       const result = await response.json()
@@ -319,9 +314,7 @@ class SpeakerUpload {
   async loadShareableLink() {
     try {
       const response = await fetch(`${this.apiUrl}/event/shareable-link`, {
-        headers: {
-          Authorization: `Bearer ${this.authToken}`,
-        },
+        credentials: "include",
       })
 
       const result = await response.json()
@@ -394,9 +387,7 @@ class SpeakerUpload {
 
       const response = await fetch(`${this.apiUrl}/upload`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.authToken}`,
-        },
+        credentials: "include",
         body: formData,
       })
 
