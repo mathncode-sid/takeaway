@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takeaway - Share Your Presentations Seamlessly</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background">
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">Share Your Presentations <span class="highlight">Seamlessly</span></h1>
+            <p class="hero-subtitle">Upload your presentation materials and share them instantly with attendees through secure, shareable links.</p>
+            
+            <div class="hero-actions">
+                <button class="btn btn-primary" onclick="openSpeakerModal()">
+                    <span>For Speakers</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m9 18 6-6-6-6"/>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="openAttendeeModal()">
+                    <span>For Attendees</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                        <polyline points="10,17 15,12 10,7"/>
+                        <line x1="15" x2="3" y1="12" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="features-title">How Takeaway Works</h2>
+            <div class="features-grid">
+                <div class="feature-card" data-animate>
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" x2="8" y1="13" y2="13"/>
+                            <line x1="16" x2="8" y1="17" y2="17"/>
+                            <polyline points="10,9 9,9 8,9"/>
+                        </svg>
+                    </div>
+                    <h3>Upload Materials</h3>
+                    <p>Speakers upload presentation files, documents, and resources in seconds.</p>
+                </div>
+                
+                <div class="feature-card" data-animate>
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                        </svg>
+                    </div>
+                    <h3>Generate Links</h3>
+                    <p>Get secure, shareable links that you can distribute to your audience.</p>
+                </div>
+                
+                <div class="feature-card" data-animate>
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12,6 12,12 16,14"/>
+                        </svg>
+                    </div>
+                    <h3>Instant Access</h3>
+                    <p>Attendees access materials instantly using the shared link - no signup required.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Speaker Modal -->
+    <div id="speakerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Speaker Access</h3>
+                <button class="modal-close" onclick="closeSpeakerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-tabs">
+                    <button class="tab-btn active" onclick="showLogin()">Login</button>
+                    <button class="tab-btn" onclick="showRegister()">Register</button>
+                </div>
+                
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <!-- Changed from Email to Username to match backend -->
+                        <label for="loginUsername">Username</label>
+                        <input type="text" id="loginUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary full-width">Login</button>
+                </form>
+                
+                <form id="registerForm" class="auth-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="registerName">Full Name</label>
+                        <input type="text" id="registerName" required>
+                    </div>
+                    <div class="form-group">
+                        <!-- Changed from Email to Username to match backend -->
+                        <label for="registerUsername">Username</label>
+                        <input type="text" id="registerUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary full-width">Register</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendee Modal -->
+    <div id="attendeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Access Presentation</h3>
+                <button class="modal-close" onclick="closeAttendeeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Enter the link provided by your speaker to access presentation materials.</p>
+                <form id="attendeeForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="presentationLink">Presentation Link</label>
+                        <input type="url" id="presentationLink" placeholder="https://takeaway.com/p/..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary full-width">Access Materials</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="landing.js"></script>
+</body>
+</html>
