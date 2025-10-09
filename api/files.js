@@ -1,0 +1,20 @@
+import { list } from "@vercel/blob"
+
+export default async function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" })
+  }
+  try {
+    const { blobs } = await list()
+    // Filter and sort as needed
+    const files = blobs.map(blob => ({
+      filename: blob.pathname,
+      url: blob.url,
+      size: blob.size,
+      uploadDate: blob.uploadedAt,
+    }))
+    res.status(200).json(files)
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch files" })
+  }
+}
