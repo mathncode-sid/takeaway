@@ -33,19 +33,19 @@ A minimal file upload and sharing application for speakers to upload presentatio
 ### Installation
 
 1. **Install dependencies:**
-   ```
+   \`\`\`bash
    npm install
-   ```
+   \`\`\`
 
 2. **Start the server:**
-   ```
+   \`\`\`bash
    npm start
-   ```
+   \`\`\`
    
    For development with auto-restart:
-   ```
+   \`\`\`bash
    npm run dev
-   ```
+   \`\`\`
 
 3. **Access the application:**
    - Speaker upload page: `http://localhost:3001/speaker.html`
@@ -54,7 +54,7 @@ A minimal file upload and sharing application for speakers to upload presentatio
 
 ### Project Structure
 
-```
+\`\`\`
 takeaway-mvp/
 ├── server.js                 # Express server with API endpoints
 ├── lib/
@@ -68,7 +68,7 @@ takeaway-mvp/
 ├── uploads/                  # File storage directory (created automatically)
 ├── package.json
 └── README.md
-```
+\`\`\`
 
 ## API Endpoints
 
