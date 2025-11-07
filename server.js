@@ -41,10 +41,12 @@ initializeEventConfig().catch(err => {
 
 // Helper functions for signed cookie authentication (works on serverless)
 function signData(data) {
+  // Sort keys for consistent JSON stringification
+  const sortedData = JSON.stringify(data, Object.keys(data).sort())
   const signature = createHmac('sha256', SESSION_SECRET)
-    .update(JSON.stringify(data))
+    .update(sortedData)
     .digest('hex')
-  return `${Buffer.from(JSON.stringify(data)).toString('base64')}.${signature}`
+  return `${Buffer.from(sortedData).toString('base64')}.${signature}`
 }
 
 function verifySignedData(signedData) {
@@ -53,9 +55,12 @@ function verifySignedData(signedData) {
   if (!dataB64 || !signature) return null
   
   try {
-    const data = JSON.parse(Buffer.from(dataB64, 'base64').toString())
+    const dataStr = Buffer.from(dataB64, 'base64').toString()
+    const data = JSON.parse(dataStr)
+    
+    // Verify signature using the exact string from the cookie
     const expectedSignature = createHmac('sha256', SESSION_SECRET)
-      .update(JSON.stringify(data))
+      .update(dataStr)
       .digest('hex')
     
     if (signature === expectedSignature) {
@@ -80,9 +85,14 @@ const authenticateSession = (req, res, next) => {
   const cookieHeader = req.headers.cookie
   console.log('Auth check - Cookie header:', cookieHeader)
   
-  const authCookie = cookieHeader?.split('; ')
+  let authCookie = cookieHeader?.split('; ')
     .find(c => c.startsWith('takeaway_auth='))
     ?.split('=')[1]
+  
+  // URL decode the cookie value
+  if (authCookie) {
+    authCookie = decodeURIComponent(authCookie)
+  }
   
   console.log('Auth check - Extracted cookie:', authCookie ? 'present' : 'missing')
   
