@@ -1,18 +1,4 @@
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
-
-const eventConfigPath = join(process.cwd(), 'event-config.json')
-
-function loadEvent() {
-  if (existsSync(eventConfigPath)) {
-    try {
-      return JSON.parse(readFileSync(eventConfigPath, 'utf8'))
-    } catch (err) {
-      return null
-    }
-  }
-  return null
-}
+import { loadEventConfig } from '../lib/eventConfig.js'
 
 function parseCookies(cookieHeader) {
   const out = {}
@@ -30,7 +16,7 @@ function isAuthenticated(req) {
   return !!cookies.takeaway_session
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const origin = req.headers.origin || '*'
   res.setHeader('Access-Control-Allow-Origin', origin)
   res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -53,18 +39,27 @@ export default function handler(req, res) {
     return res.end(JSON.stringify({ error: 'Authentication required' }))
   }
 
-  const event = loadEvent() || { shareableLink: null }
+  try {
+    const event = await loadEventConfig()
 
-  if (!event.shareableLink) {
-    res.statusCode = 404
+    if (!event.shareableLink) {
+      res.statusCode = 404
+      res.setHeader('Content-Type', 'application/json')
+      return res.end(JSON.stringify({ error: 'No shareable link generated yet' }))
+    }
+
+    const host = req.headers.host || process.env.VERCEL_URL || 'localhost:3000'
+    const scheme = req.headers['x-forwarded-proto'] || 'https'
+    const baseUrl = host.startsWith('http') ? host : `${scheme}://${host}`
+    const shareableUrl = `${baseUrl}/event/${event.shareableLink}`
+
+    res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
-    return res.end(JSON.stringify({ error: 'No shareable link generated yet' }))
+    return res.end(JSON.stringify({ success: true, shareableLink: event.shareableLink, shareableUrl, event: { name: event.name, startDate: event.startDate, endDate: event.endDate } }))
+  } catch (error) {
+    console.error('Shareable link fetch error:', error)
+    res.statusCode = 500
+    res.setHeader('Content-Type', 'application/json')
+    return res.end(JSON.stringify({ error: 'Failed to fetch shareable link', detail: error.message }))
   }
-
-  const baseUrl = `https://${req.headers.host}`
-  const shareableUrl = `${baseUrl}/event/${event.shareableLink}`
-
-  res.statusCode = 200
-  res.setHeader('Content-Type', 'application/json')
-  return res.end(JSON.stringify({ success: true, shareableLink: event.shareableLink, shareableUrl, event: { name: event.name, startDate: event.startDate, endDate: event.endDate } }))
 }

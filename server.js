@@ -1,12 +1,12 @@
 import express, { json } from "express"
 import multer, { memoryStorage, MulterError } from "multer"
 import { join } from "path"
-import { existsSync, readFileSync, writeFileSync } from "fs"
 import cors from "cors"
 import session from "express-session"
 import { randomBytes } from "crypto"
 import { generateDetailedSummary } from "./lib/aiSummaryGenerator.js"
 import { listBlobs, putBlob, isUsingVercel } from './lib/blobClient.js'
+import { loadEventConfig, saveEventConfig } from './lib/eventConfig.js'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -25,26 +25,18 @@ const SPEAKERS = [
   },
 ]
 
-const EVENT_CONFIG = {
-  id: "default-event",
-  name: "Default Event",
-  startDate: new Date().toISOString(),
-  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  isActive: true,
-  shareableLink: null,
-}
-
 let filesMetadata = []
+let currentEvent = null
 
-const eventConfigPath = join(__dirname, "event-config.json")
-let currentEvent = EVENT_CONFIG
-if (existsSync(eventConfigPath)) {
-  try {
-    currentEvent = JSON.parse(readFileSync(eventConfigPath, "utf8"))
-  } catch (error) {
-    console.warn("Could not load event config, using defaults")
-  }
+// Load event config on startup
+async function initializeEventConfig() {
+  currentEvent = await loadEventConfig()
+  console.log('Event config loaded:', currentEvent.name)
 }
+
+initializeEventConfig().catch(err => {
+  console.error('Failed to initialize event config:', err)
+})
 
 app.use(
   session({
@@ -330,11 +322,11 @@ async function saveMetadataToBlob() {
 
 loadMetadataFromBlob()
 
-app.post("/api/event/generate-link", authenticateSession, (req, res) => {
+app.post("/api/event/generate-link", authenticateSession, async (req, res) => {
   try {
     const linkToken = randomBytes(32).toString("hex")
     currentEvent.shareableLink = linkToken
-    writeFileSync(eventConfigPath, JSON.stringify(currentEvent, null, 2))
+    await saveEventConfig(currentEvent)
 
     const baseUrl = getBaseUrl(req)
     const shareableUrl = `${baseUrl}/event/${linkToken}`
@@ -352,7 +344,7 @@ app.post("/api/event/generate-link", authenticateSession, (req, res) => {
     })
   } catch (error) {
     console.error("Link generation error:", error)
-    res.status(500).json({ error: "Failed to generate shareable link" })
+    res.status(500).json({ error: "Failed to generate shareable link", detail: error.message })
   }
 })
 
@@ -376,7 +368,7 @@ app.get("/api/event/shareable-link", authenticateSession, (req, res) => {
   })
 })
 
-app.post("/api/event/configure", authenticateSession, (req, res) => {
+app.post("/api/event/configure", authenticateSession, async (req, res) => {
   try {
     const { name, startDate, endDate, isActive } = req.body
 
@@ -389,7 +381,7 @@ app.post("/api/event/configure", authenticateSession, (req, res) => {
       return res.status(400).json({ error: "Start date must be before end date" })
     }
 
-    writeFileSync(eventConfigPath, JSON.stringify(currentEvent, null, 2))
+    await saveEventConfig(currentEvent)
 
     res.json({
       success: true,
@@ -398,7 +390,7 @@ app.post("/api/event/configure", authenticateSession, (req, res) => {
     })
   } catch (error) {
     console.error("Event configuration error:", error)
-    res.status(500).json({ error: "Failed to update event configuration" })
+    res.status(500).json({ error: "Failed to update event configuration", detail: error.message })
   }
 })
 

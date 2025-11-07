@@ -1,7 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
-
-const eventConfigPath = join(process.cwd(), 'event-config.json')
+import { loadEventConfig, saveEventConfig } from '../lib/eventConfig.js'
 
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -20,21 +17,6 @@ function parseJsonBody(req) {
     })
     req.on('error', reject)
   })
-}
-
-function loadEvent() {
-  if (existsSync(eventConfigPath)) {
-    try {
-      return JSON.parse(readFileSync(eventConfigPath, 'utf8'))
-    } catch (err) {
-      return null
-    }
-  }
-  return null
-}
-
-function saveEvent(event) {
-  writeFileSync(eventConfigPath, JSON.stringify(event, null, 2))
 }
 
 function parseCookies(cookieHeader) {
@@ -80,14 +62,7 @@ export default async function handler(req, res) {
     const body = await parseJsonBody(req)
     const { name, startDate, endDate, isActive } = body || {}
 
-    const event = loadEvent() || {
-      id: 'default-event',
-      name: 'Default Event',
-      startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      isActive: true,
-      shareableLink: null,
-    }
+    const event = await loadEventConfig()
 
     if (name) event.name = name
     if (startDate) event.startDate = startDate
@@ -100,11 +75,12 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: 'Start date must be before end date' }))
     }
 
-    saveEvent(event)
+    await saveEventConfig(event)
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
     return res.end(JSON.stringify({ success: true, event }))
   } catch (err) {
+    console.error('Event configure error:', err)
     res.statusCode = 500
     res.setHeader('Content-Type', 'application/json')
     return res.end(JSON.stringify({ error: 'Failed to update event configuration', detail: err.message }))

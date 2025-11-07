@@ -1,23 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
 import { randomBytes } from 'crypto'
-
-const eventConfigPath = join(process.cwd(), 'event-config.json')
-
-function loadEvent() {
-  if (existsSync(eventConfigPath)) {
-    try {
-      return JSON.parse(readFileSync(eventConfigPath, 'utf8'))
-    } catch (err) {
-      return null
-    }
-  }
-  return null
-}
-
-function saveEvent(event) {
-  writeFileSync(eventConfigPath, JSON.stringify(event, null, 2))
-}
+import { loadEventConfig, saveEventConfig } from '../lib/eventConfig.js'
 
 function parseCookies(cookieHeader) {
   const out = {}
@@ -35,7 +17,7 @@ function isAuthenticated(req) {
   return !!cookies.takeaway_session
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const origin = req.headers.origin || '*'
   res.setHeader('Access-Control-Allow-Origin', origin)
   res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -58,23 +40,26 @@ export default function handler(req, res) {
     return res.end(JSON.stringify({ error: 'Authentication required' }))
   }
 
-  const event = loadEvent() || {
-    id: 'default-event',
-    name: 'Default Event',
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: true,
-    shareableLink: null,
+  try {
+    const event = await loadEventConfig()
+
+    const linkToken = randomBytes(32).toString('hex')
+    event.shareableLink = linkToken
+    await saveEventConfig(event)
+
+    // Build a safe base URL. If host is missing (serverless/platform differences), fall back to VERCEL_URL or https://localhost
+    const host = req.headers.host || process.env.VERCEL_URL || 'localhost:3000'
+    const scheme = req.headers['x-forwarded-proto'] || 'https'
+    const baseUrl = host.startsWith('http') ? host : `${scheme}://${host}`
+    const shareableUrl = `${baseUrl}/event/${linkToken}`
+
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'application/json')
+    return res.end(JSON.stringify({ success: true, shareableLink: linkToken, shareableUrl, event: { name: event.name, startDate: event.startDate, endDate: event.endDate } }))
+  } catch (error) {
+    console.error('Generate link error:', error)
+    res.statusCode = 500
+    res.setHeader('Content-Type', 'application/json')
+    return res.end(JSON.stringify({ error: 'Failed to generate shareable link', detail: error.message }))
   }
-
-  const linkToken = randomBytes(32).toString('hex')
-  event.shareableLink = linkToken
-  saveEvent(event)
-
-  const baseUrl = `https://${req.headers.host}`
-  const shareableUrl = `${baseUrl}/event/${linkToken}`
-
-  res.statusCode = 200
-  res.setHeader('Content-Type', 'application/json')
-  return res.end(JSON.stringify({ success: true, shareableLink: linkToken, shareableUrl, event: { name: event.name, startDate: event.startDate, endDate: event.endDate } }))
 }
