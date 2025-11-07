@@ -1,6 +1,7 @@
 {
   "name": "takeaway-mvp",
   "version": "1.0.0",
+  "type": "module",
   "description": "Minimal MVP for file upload and AI summary generation",
   "main": "server.js",
   "scripts": {

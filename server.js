@@ -579,12 +579,18 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: error.message || "Internal server error" })
 })
 
-app.listen(PORT, () => {
-  console.log(`Takeaway server running on http://localhost:${PORT}`)
-  try {
-    console.log(isUsingVercel() ? `Using Vercel Blob for file storage` : `Using local_blob for file storage (no BLOB_READ_WRITE_TOKEN)`)
-  } catch (err) {
-    console.log(`Using local_blob for file storage (detection failed)`) 
-  }
-  console.log(`Default speaker credentials: username="speaker", password="password123"`)
-})
+// For Vercel serverless deployment
+export default app
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Takeaway server running on http://localhost:${PORT}`)
+    try {
+      console.log(isUsingVercel() ? `Using Vercel Blob for file storage` : `Using local_blob for file storage (no BLOB_READ_WRITE_TOKEN)`)
+    } catch (err) {
+      console.log(`Using local_blob for file storage (detection failed)`) 
+    }
+    console.log(`Default speaker credentials: username="speaker", password="password123"`)
+  })
+}
