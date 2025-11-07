@@ -1,6 +1,6 @@
 import multer from "multer"
-import { put } from "@vercel/blob"
-import { generateDetailedSummary } from "../lib/aiSummaryGenerator.js"
+import { putBlob } from "./lib/blobClient.js"
+import { generateDetailedSummary } from "./lib/aiSummaryGenerator.js"
 
 const storage = multer.memoryStorage()
 const upload = multer({
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     try {
       const timestamp = Date.now()
       const filename = `${timestamp}-${req.file.originalname}`
-      const blob = await put(filename, req.file.buffer, {
+      const blob = await putBlob(filename, req.file.buffer, {
         access: "public",
         contentType: req.file.mimetype,
       })

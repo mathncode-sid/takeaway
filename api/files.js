@@ -1,4 +1,4 @@
-import { list } from "@vercel/blob"
+import { listBlobs } from "./lib/blobClient.js"
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*"
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" })
   }
   try {
-    const { blobs } = await list()
+    const { blobs } = await listBlobs()
     // Filter and sort as needed
     const files = blobs.map(blob => ({
       filename: blob.pathname,
