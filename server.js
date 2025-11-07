@@ -3,7 +3,7 @@ import multer, { memoryStorage, MulterError } from "multer"
 import { join } from "path"
 import cors from "cors"
 import session from "express-session"
-import { randomBytes } from "crypto"
+import { randomBytes, createHmac } from "crypto"
 import { generateDetailedSummary } from "./lib/aiSummaryGenerator.js"
 import { listBlobs, putBlob, isUsingVercel } from './lib/blobClient.js'
 import { loadEventConfig, saveEventConfig } from './lib/eventConfig.js'
@@ -15,6 +15,7 @@ const __dirname = dirname(__filename);
 
 const app = express()
 const PORT = process.env.PORT || 3001
+const SESSION_SECRET = process.env.SESSION_SECRET || "takeaway-session-secret"
 
 const SPEAKERS = [
   {
@@ -38,18 +39,33 @@ initializeEventConfig().catch(err => {
   console.error('Failed to initialize event config:', err)
 })
 
-app.use(
-  session({
-    secret: "takeaway-session-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false,
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-    },
-  }),
-)
+// Helper functions for signed cookie authentication (works on serverless)
+function signData(data) {
+  const signature = createHmac('sha256', SESSION_SECRET)
+    .update(JSON.stringify(data))
+    .digest('hex')
+  return `${Buffer.from(JSON.stringify(data)).toString('base64')}.${signature}`
+}
+
+function verifySignedData(signedData) {
+  if (!signedData) return null
+  const [dataB64, signature] = signedData.split('.')
+  if (!dataB64 || !signature) return null
+  
+  try {
+    const data = JSON.parse(Buffer.from(dataB64, 'base64').toString())
+    const expectedSignature = createHmac('sha256', SESSION_SECRET)
+      .update(JSON.stringify(data))
+      .digest('hex')
+    
+    if (signature === expectedSignature) {
+      return data
+    }
+  } catch (err) {
+    console.error('Cookie verification failed:', err.message)
+  }
+  return null
+}
 
 app.use(
   cors({
@@ -61,10 +77,16 @@ app.use(json())
 app.use(express.static(join(__dirname, "public")))
 
 const authenticateSession = (req, res, next) => {
-  if (!req.session.user) {
+  const authCookie = req.headers.cookie?.split('; ')
+    .find(c => c.startsWith('takeaway_auth='))
+    ?.split('=')[1]
+  
+  const userData = verifySignedData(authCookie)
+  if (!userData) {
     return res.status(401).json({ error: "Authentication required" })
   }
-  req.user = req.session.user
+  
+  req.user = userData
   next()
 }
 
@@ -207,19 +229,19 @@ app.post("/api/auth/login", (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" })
     }
 
-    req.session.user = {
+    const userData = {
       id: speaker.id,
       username: speaker.username,
       name: speaker.name,
     }
 
+    const signedCookie = signData(userData)
+    
+    res.setHeader('Set-Cookie', `takeaway_auth=${signedCookie}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Lax`)
+    
     res.json({
       success: true,
-      user: {
-        id: speaker.id,
-        username: speaker.username,
-        name: speaker.name,
-      },
+      user: userData,
     })
   } catch (error) {
     console.error("Login error:", error)
@@ -248,20 +270,20 @@ app.post("/api/auth/register", (req, res) => {
 
     SPEAKERS.push(newSpeaker)
 
-    req.session.user = {
+    const userData = {
       id: newSpeaker.id,
       username: newSpeaker.username,
       name: newSpeaker.name,
     }
 
+    const signedCookie = signData(userData)
+    
+    res.setHeader('Set-Cookie', `takeaway_auth=${signedCookie}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Lax`)
+
     res.json({
       success: true,
       message: "Registration successful",
-      user: {
-        id: newSpeaker.id,
-        username: newSpeaker.username,
-        name: newSpeaker.name,
-      },
+      user: userData,
     })
   } catch (error) {
     console.error("Registration error:", error)
@@ -277,12 +299,8 @@ app.get("/api/auth/verify", authenticateSession, (req, res) => {
 })
 
 app.post("/api/auth/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: "Logout failed" })
-    }
-    res.json({ success: true, message: "Logged out successfully" })
-  })
+  res.setHeader('Set-Cookie', 'takeaway_auth=; HttpOnly; Path=/; Max-Age=0')
+  res.json({ success: true })
 })
 
 function getBaseUrl(req) {
