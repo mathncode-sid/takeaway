@@ -95,16 +95,22 @@ const authenticateSession = (req, res, next) => {
   const cookieHeader = req.headers.cookie
   console.log('Auth check - Cookie header:', cookieHeader)
   
-  let authCookie = cookieHeader?.split('; ')
-    .find(c => c.startsWith('takeaway_auth='))
-    ?.split('=')[1]
+  let authCookie = null
+  if (cookieHeader) {
+    const cookies = cookieHeader.split('; ')
+    const authCookieEntry = cookies.find(c => c.startsWith('takeaway_auth='))
+    if (authCookieEntry) {
+      // Split only on the first = to preserve base64 padding
+      authCookie = authCookieEntry.substring('takeaway_auth='.length)
+    }
+  }
   
   // URL decode the cookie value
   if (authCookie) {
     authCookie = decodeURIComponent(authCookie)
   }
   
-  console.log('Auth check - Extracted cookie:', authCookie ? 'present' : 'missing')
+  console.log('Auth check - Extracted cookie:', authCookie ? authCookie.substring(0, 30) + '...' : 'missing')
   
   const userData = verifySignedData(authCookie)
   console.log('Auth check - Verified user:', userData ? userData.username : 'failed')
