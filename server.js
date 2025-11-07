@@ -46,22 +46,32 @@ function signData(data) {
   const signature = createHmac('sha256', SESSION_SECRET)
     .update(sortedData)
     .digest('hex')
+  console.log('Signing data:', sortedData, '-> signature:', signature.substring(0, 10) + '...')
   return `${Buffer.from(sortedData).toString('base64')}.${signature}`
 }
 
 function verifySignedData(signedData) {
   if (!signedData) return null
   const [dataB64, signature] = signedData.split('.')
-  if (!dataB64 || !signature) return null
+  if (!dataB64 || !signature) {
+    console.log('Verify failed: missing dataB64 or signature')
+    return null
+  }
   
   try {
     const dataStr = Buffer.from(dataB64, 'base64').toString()
     const data = JSON.parse(dataStr)
     
+    console.log('Verifying data string:', dataStr)
+    
     // Verify signature using the exact string from the cookie
     const expectedSignature = createHmac('sha256', SESSION_SECRET)
       .update(dataStr)
       .digest('hex')
+    
+    console.log('Expected signature:', expectedSignature.substring(0, 10) + '...')
+    console.log('Received signature:', signature.substring(0, 10) + '...')
+    console.log('Signatures match:', signature === expectedSignature)
     
     if (signature === expectedSignature) {
       return data
