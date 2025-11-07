@@ -58,7 +58,7 @@ app.use(
   }),
 )
 app.use(json())
-app.use(express.static("public"))
+app.use(express.static(join(__dirname, "public")))
 
 const authenticateSession = (req, res, next) => {
   if (!req.session.user) {
@@ -577,6 +577,11 @@ app.use((error, req, res, next) => {
   }
 
   res.status(500).json({ error: error.message || "Internal server error" })
+})
+
+// Serve index.html for root route
+app.get("/", (req, res) => {
+  res.sendFile(join(__dirname, "public", "index.html"))
 })
 
 // For Vercel serverless deployment
