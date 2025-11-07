@@ -77,11 +77,18 @@ app.use(json())
 app.use(express.static(join(__dirname, "public")))
 
 const authenticateSession = (req, res, next) => {
-  const authCookie = req.headers.cookie?.split('; ')
+  const cookieHeader = req.headers.cookie
+  console.log('Auth check - Cookie header:', cookieHeader)
+  
+  const authCookie = cookieHeader?.split('; ')
     .find(c => c.startsWith('takeaway_auth='))
     ?.split('=')[1]
   
+  console.log('Auth check - Extracted cookie:', authCookie ? 'present' : 'missing')
+  
   const userData = verifySignedData(authCookie)
+  console.log('Auth check - Verified user:', userData ? userData.username : 'failed')
+  
   if (!userData) {
     return res.status(401).json({ error: "Authentication required" })
   }
@@ -236,6 +243,7 @@ app.post("/api/auth/login", (req, res) => {
     }
 
     const signedCookie = signData(userData)
+    console.log('Login successful - Setting cookie for:', userData.username)
     
     res.setHeader('Set-Cookie', `takeaway_auth=${signedCookie}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Lax`)
     
