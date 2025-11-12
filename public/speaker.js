@@ -524,6 +524,59 @@ async function loadShareableLink() {
   }
 }
 
+// Load list of uploaded files and render into #filesList
+async function loadFiles() {
+  const listEl = document.getElementById('filesList')
+  const refreshBtn = document.getElementById('refreshFilesBtn')
+  if (!listEl) return
+  refreshBtn && (refreshBtn.disabled = true)
+  listEl.innerHTML = 'Loading...'
+  try {
+    const res = await fetch('/api/files')
+    const json = await res.json()
+    if (res.ok && Array.isArray(json.files)) {
+      renderFiles(json.files)
+    } else {
+      listEl.innerHTML = '<div class="muted">No files found.</div>'
+    }
+  } catch (err) {
+    listEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${err.message || 'Could not load files'}</div>`
+  } finally {
+    refreshBtn && (refreshBtn.disabled = false)
+  }
+}
+
+function renderFiles(files) {
+  const listEl = document.getElementById('filesList')
+  if (!listEl) return
+  if (!files || files.length === 0) {
+    listEl.innerHTML = '<div class="muted">No files uploaded yet.</div>'
+    return
+  }
+
+  const html = files.map(f => {
+    const size = (f.size / 1024 / 1024).toFixed(2) + ' MB'
+    const uploaded = f.uploadDate ? new Date(f.uploadDate).toLocaleString() : ''
+    return `
+      <div class="file-row" style="padding:8px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:600">${escapeHtml(f.originalName)}</div>
+          <div class="muted" style="font-size:0.9rem">${size} • ${uploaded}</div>
+        </div>
+        <div>
+          <a class="btn btn--small" href="${f.blobUrl}" target="_blank">Open</a>
+        </div>
+      </div>`
+  }).join('\n')
+
+  listEl.innerHTML = html
+}
+
+function escapeHtml(s) {
+  if (!s) return ''
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'})[c])
+}
+
 generateLinkBtn.addEventListener('click', async () => {
   generateLinkBtn.disabled = true
   generateLinkBtn.textContent = 'Generating...'
@@ -583,8 +636,9 @@ uploadBtn.addEventListener('click', () => {
         if (xhr.status >= 200 && xhr.status < 300 && res.success) {
           resultEl.style.display = 'block'
           resultEl.innerHTML = `<div class="notification success"><strong>Uploaded!</strong> <div>File: ${res.file.originalName}</div><div><a href="${res.file.blobUrl}" target="_blank">Open file</a></div></div>`
-          // Refresh shareable link display (in case event link was just created elsewhere)
+          // Refresh shareable link display and files list (in case event link was created elsewhere)
           await loadShareableLink()
+          await loadFiles()
         } else {
           resultEl.style.display = 'block'
           resultEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${res.error || 'Upload failed'}</div>`
@@ -599,5 +653,10 @@ uploadBtn.addEventListener('click', () => {
   xhr.send(formData)
 })
 
+// Wire refresh button
+const refreshFilesBtn = document.getElementById('refreshFilesBtn')
+if (refreshFilesBtn) refreshFilesBtn.addEventListener('click', loadFiles)
+
 // Initial load
 loadShareableLink()
+loadFiles()
