@@ -3,13 +3,12 @@ const API_URL = "/api"
 
 // Modal management
 function openSpeakerModal() {
-  // Speaker modal removed; open attendee modal instead
-  openAttendeeModal()
+  // Navigate to the public speaker upload page
+  window.location.href = '/speaker.html'
 }
 
 function closeSpeakerModal() {
-  // no-op since speaker modal removed
-  closeAttendeeModal()
+  // no-op
 }
 
 function openAttendeeModal() {
