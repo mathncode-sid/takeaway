@@ -256,11 +256,22 @@ app.post("/api/auth/logout", (req, res) => {
 })
 
 function getBaseUrl(req) {
-  // In production on Vercel, use VERCEL_URL
+  // Prefer explicit configured base URL if provided (useful for Vercel or custom domains)
+  const configured = process.env.BASE_URL || process.env.PUBLIC_BASE_URL
+  if (configured) {
+    // Ensure protocol exists
+    if (configured.startsWith('http://') || configured.startsWith('https://')) {
+      return configured.replace(/\/$/, '')
+    }
+    return `https://${configured.replace(/\/$/, '')}`
+  }
+
+  // Next, fall back to VERCEL_URL (automatically set in Vercel)
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`
   }
-  // In development, use the request host
+
+  // Finally, use the incoming request's host (development/local)
   return `${req.protocol}://${req.get("host")}`
 }
 
