@@ -486,7 +486,61 @@ class SpeakerUpload {
   }
 }
 
-// Initialize the upload interface when the page loads
-document.addEventListener("DOMContentLoaded", () => {
-  new SpeakerUpload()
+// Simple speaker upload script (public, no auth)
+const uploadBtn = document.getElementById('uploadBtn')
+const fileInput = document.getElementById('fileInput')
+const backBtn = document.getElementById('backBtn')
+const progressContainer = document.getElementById('progressContainer')
+const progressBar = document.getElementById('progressBar')
+const progressText = document.getElementById('progressText')
+const resultEl = document.getElementById('result')
+
+fileInput.addEventListener('change', () => {
+  uploadBtn.disabled = !fileInput.files || fileInput.files.length === 0
+})
+
+backBtn.addEventListener('click', () => {
+  window.location.href = '/'
+})
+
+uploadBtn.addEventListener('click', () => {
+  if (!fileInput.files || fileInput.files.length === 0) return
+  const file = fileInput.files[0]
+
+  // Use XMLHttpRequest for progress events
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const xhr = new XMLHttpRequest()
+  xhr.open('POST', '/api/upload', true)
+
+  xhr.upload.addEventListener('progress', (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100)
+      progressContainer.style.display = 'block'
+      progressBar.style.width = pct + '%'
+      progressText.textContent = `${pct}% (${(e.loaded/1024/1024).toFixed(2)} MB of ${(e.total/1024/1024).toFixed(2)} MB)`
+    }
+  })
+
+  xhr.onreadystatechange = () => {
+    if (xhr.readyState === 4) {
+      progressContainer.style.display = 'none'
+      try {
+        const res = JSON.parse(xhr.responseText)
+        if (xhr.status >= 200 && xhr.status < 300 && res.success) {
+          resultEl.style.display = 'block'
+          resultEl.innerHTML = `<div class="notification success"><strong>Uploaded!</strong> <div>File: ${res.file.originalName}</div><div><a href="${res.file.blobUrl}" target="_blank">Open file</a></div></div>`
+        } else {
+          resultEl.style.display = 'block'
+          resultEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${res.error || 'Upload failed'}</div>`
+        }
+      } catch (err) {
+        resultEl.style.display = 'block'
+        resultEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${xhr.statusText || 'Upload failed'}</div>`
+      }
+    }
+  }
+
+  xhr.send(formData)
 })
