@@ -3,13 +3,13 @@ const API_URL = "/api"
 
 // Modal management
 function openSpeakerModal() {
-  document.getElementById("speakerModal").style.display = "block"
-  document.body.style.overflow = "hidden"
+  // Speaker modal removed; open attendee modal instead
+  openAttendeeModal()
 }
 
 function closeSpeakerModal() {
-  document.getElementById("speakerModal").style.display = "none"
-  document.body.style.overflow = "auto"
+  // no-op since speaker modal removed
+  closeAttendeeModal()
 }
 
 function openAttendeeModal() {
@@ -23,94 +23,17 @@ function closeAttendeeModal() {
 }
 
 // Tab switching
-function showLogin() {
-  document.getElementById("loginForm").style.display = "block"
-  document.getElementById("registerForm").style.display = "none"
-
-  // Update tab buttons
-  document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.remove("active"))
-  event.target.classList.add("active")
-}
-
-function showRegister() {
-  document.getElementById("loginForm").style.display = "none"
-  document.getElementById("registerForm").style.display = "block"
-
-  // Update tab buttons
-  document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.remove("active"))
-  event.target.classList.add("active")
-}
+// Login/register UI removed (speaker flows are public)
 
 // Close modals when clicking outside
 window.onclick = (event) => {
-  const speakerModal = document.getElementById("speakerModal")
   const attendeeModal = document.getElementById("attendeeModal")
 
-  if (event.target === speakerModal) {
-    closeSpeakerModal()
-  }
   if (event.target === attendeeModal) {
     closeAttendeeModal()
   }
 }
-
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault()
-
-  const username = document.getElementById("loginUsername").value
-  const password = document.getElementById("loginPassword").value
-
-  try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ username, password }),
-    })
-
-    const result = await response.json()
-
-    if (response.ok && result.success) {
-      window.location.href = "/speaker.html"
-    } else {
-      alert("Login failed: " + (result.error || "Invalid credentials"))
-    }
-  } catch (error) {
-    alert("Login failed: " + error.message)
-  }
-})
-
-document.getElementById("registerForm").addEventListener("submit", async (e) => {
-  e.preventDefault()
-
-  const name = document.getElementById("registerName").value
-  const username = document.getElementById("registerUsername").value
-  const password = document.getElementById("registerPassword").value
-
-  try {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ name, username, password }),
-    })
-
-    const result = await response.json()
-
-    if (response.ok && result.success) {
-      // Automatically redirect to speaker page after registration
-      window.location.href = "/speaker.html"
-    } else {
-      alert("Registration failed: " + (result.error || "Unknown error"))
-    }
-  } catch (error) {
-    alert("Registration failed: " + error.message)
-  }
-})
+// Removed login/register handlers
 
 document.getElementById("attendeeForm").addEventListener("submit", (e) => {
   e.preventDefault()
