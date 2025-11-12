@@ -495,12 +495,64 @@ const progressBar = document.getElementById('progressBar')
 const progressText = document.getElementById('progressText')
 const resultEl = document.getElementById('result')
 
+// Shareable link elements added in HTML
+const shareableLinkInput = document.getElementById('shareableLinkInput')
+const generateLinkBtn = document.getElementById('generateLinkBtn')
+const copyLinkBtn = document.getElementById('copyLinkBtn')
+
 fileInput.addEventListener('change', () => {
   uploadBtn.disabled = !fileInput.files || fileInput.files.length === 0
 })
 
 backBtn.addEventListener('click', () => {
   window.location.href = '/'
+})
+
+// Load current shareable link on page load
+async function loadShareableLink() {
+  try {
+    const res = await fetch('/api/event/shareable-link')
+    const json = await res.json()
+    if (res.ok && json.success && json.shareableUrl) {
+      shareableLinkInput.value = json.shareableUrl
+    } else {
+      shareableLinkInput.value = ''
+      shareableLinkInput.placeholder = 'No shareable link yet'
+    }
+  } catch (err) {
+    // ignore
+  }
+}
+
+generateLinkBtn.addEventListener('click', async () => {
+  generateLinkBtn.disabled = true
+  generateLinkBtn.textContent = 'Generating...'
+  try {
+    const res = await fetch('/api/event/generate-link', { method: 'POST' })
+    const json = await res.json()
+    if (res.ok && json.success && json.shareableUrl) {
+      shareableLinkInput.value = json.shareableUrl
+      resultEl.style.display = 'block'
+      resultEl.innerHTML = `<div class="notification success"><strong>Shareable link created</strong> <div><a href="${json.shareableUrl}" target="_blank">Open event link</a></div></div>`
+    } else {
+      resultEl.style.display = 'block'
+      resultEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${json.error || 'Failed to create link'}</div>`
+    }
+  } catch (err) {
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${err.message || 'Request failed'}</div>`
+  } finally {
+    generateLinkBtn.disabled = false
+    generateLinkBtn.textContent = 'Generate shareable link'
+  }
+})
+
+copyLinkBtn.addEventListener('click', () => {
+  if (!shareableLinkInput.value) return
+  shareableLinkInput.select()
+  document.execCommand('copy')
+  resultEl.style.display = 'block'
+  resultEl.innerHTML = `<div class="notification success"><strong>Copied</strong> Shareable link copied to clipboard.</div>`
 })
 
 uploadBtn.addEventListener('click', () => {
@@ -523,7 +575,7 @@ uploadBtn.addEventListener('click', () => {
     }
   })
 
-  xhr.onreadystatechange = () => {
+  xhr.onreadystatechange = async () => {
     if (xhr.readyState === 4) {
       progressContainer.style.display = 'none'
       try {
@@ -531,6 +583,8 @@ uploadBtn.addEventListener('click', () => {
         if (xhr.status >= 200 && xhr.status < 300 && res.success) {
           resultEl.style.display = 'block'
           resultEl.innerHTML = `<div class="notification success"><strong>Uploaded!</strong> <div>File: ${res.file.originalName}</div><div><a href="${res.file.blobUrl}" target="_blank">Open file</a></div></div>`
+          // Refresh shareable link display (in case event link was just created elsewhere)
+          await loadShareableLink()
         } else {
           resultEl.style.display = 'block'
           resultEl.innerHTML = `<div class="notification error"><strong>Error</strong> ${res.error || 'Upload failed'}</div>`
@@ -544,3 +598,6 @@ uploadBtn.addEventListener('click', () => {
 
   xhr.send(formData)
 })
+
+// Initial load
+loadShareableLink()

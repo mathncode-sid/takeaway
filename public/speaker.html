@@ -22,6 +22,18 @@
           <button id="uploadBtn" class="btn btn-primary" disabled>Upload</button>
           <button id="backBtn" class="btn btn-secondary">Back</button>
         </div>
+        
+          <hr style="margin:18px 0;" />
+        
+          <h3>Event shareable link</h3>
+          <p class="muted">Create or view the public event link that attendees can use.</p>
+          <div id="shareableCard" style="margin-top:12px">
+            <input id="shareableLinkInput" type="text" readonly style="width:100%; padding:8px;" placeholder="No shareable link yet" />
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button id="generateLinkBtn" class="btn">Generate shareable link</button>
+              <button id="copyLinkBtn" class="btn btn--muted">Copy link</button>
+            </div>
+          </div>
 
         <div id="progressContainer" style="margin-top:1rem; display:none;">
           <div style="background:#eee; height:10px; border-radius:6px; overflow:hidden;">
