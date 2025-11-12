@@ -2,8 +2,7 @@ import express, { json } from "express"
 import multer, { memoryStorage, MulterError } from "multer"
 import { join } from "path"
 import cors from "cors"
-import session from "express-session"
-import { randomBytes, createHmac } from "crypto"
+import { randomBytes } from "crypto"
 import { generateDetailedSummary } from "./lib/aiSummaryGenerator.js"
 import { listBlobs, putBlob, isUsingVercel } from './lib/blobClient.js'
 import { loadEventConfig, saveEventConfig } from './lib/eventConfig.js'
@@ -15,7 +14,6 @@ const __dirname = dirname(__filename);
 
 const app = express()
 const PORT = process.env.PORT || 3001
-const SESSION_SECRET = process.env.SESSION_SECRET || "takeaway-session-secret"
 
 const SPEAKERS = [
   {
@@ -39,48 +37,7 @@ initializeEventConfig().catch(err => {
   console.error('Failed to initialize event config:', err)
 })
 
-// Helper functions for signed cookie authentication (works on serverless)
-function signData(data) {
-  // Sort keys for consistent JSON stringification
-  const sortedData = JSON.stringify(data, Object.keys(data).sort())
-  const signature = createHmac('sha256', SESSION_SECRET)
-    .update(sortedData)
-    .digest('hex')
-  console.log('Signing data:', sortedData, '-> signature:', signature.substring(0, 10) + '...')
-  return `${Buffer.from(sortedData).toString('base64')}.${signature}`
-}
-
-function verifySignedData(signedData) {
-  if (!signedData) return null
-  const [dataB64, signature] = signedData.split('.')
-  if (!dataB64 || !signature) {
-    console.log('Verify failed: missing dataB64 or signature')
-    return null
-  }
-  
-  try {
-    const dataStr = Buffer.from(dataB64, 'base64').toString()
-    const data = JSON.parse(dataStr)
-    
-    console.log('Verifying data string:', dataStr)
-    
-    // Verify signature using the exact string from the cookie
-    const expectedSignature = createHmac('sha256', SESSION_SECRET)
-      .update(dataStr)
-      .digest('hex')
-    
-    console.log('Expected signature:', expectedSignature.substring(0, 10) + '...')
-    console.log('Received signature:', signature.substring(0, 10) + '...')
-    console.log('Signatures match:', signature === expectedSignature)
-    
-    if (signature === expectedSignature) {
-      return data
-    }
-  } catch (err) {
-    console.error('Cookie verification failed:', err.message)
-  }
-  return null
-}
+// Authentication removed for hobby project (stateless/public endpoints)
 
 app.use(
   cors({
@@ -90,38 +47,6 @@ app.use(
 )
 app.use(json())
 app.use(express.static(join(__dirname, "public")))
-
-const authenticateSession = (req, res, next) => {
-  const cookieHeader = req.headers.cookie
-  console.log('Auth check - Cookie header:', cookieHeader)
-  
-  let authCookie = null
-  if (cookieHeader) {
-    const cookies = cookieHeader.split('; ')
-    const authCookieEntry = cookies.find(c => c.startsWith('takeaway_auth='))
-    if (authCookieEntry) {
-      // Split only on the first = to preserve base64 padding
-      authCookie = authCookieEntry.substring('takeaway_auth='.length)
-    }
-  }
-  
-  // URL decode the cookie value
-  if (authCookie) {
-    authCookie = decodeURIComponent(authCookie)
-  }
-  
-  console.log('Auth check - Extracted cookie:', authCookie ? authCookie.substring(0, 30) + '...' : 'missing')
-  
-  const userData = verifySignedData(authCookie)
-  console.log('Auth check - Verified user:', userData ? userData.username : 'failed')
-  
-  if (!userData) {
-    return res.status(401).json({ error: "Authentication required" })
-  }
-  
-  req.user = userData
-  next()
-}
 
 const checkEventAccess = (req, res, next) => {
   const now = new Date()
@@ -267,12 +192,7 @@ app.post("/api/auth/login", (req, res) => {
       username: speaker.username,
       name: speaker.name,
     }
-
-    const signedCookie = signData(userData)
-    console.log('Login successful - Setting cookie for:', userData.username)
-    
-    res.setHeader('Set-Cookie', `takeaway_auth=${signedCookie}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Lax`)
-    
+    // Authentication removed: just return the user data
     res.json({
       success: true,
       user: userData,
@@ -310,10 +230,7 @@ app.post("/api/auth/register", (req, res) => {
       name: newSpeaker.name,
     }
 
-    const signedCookie = signData(userData)
-    
-    res.setHeader('Set-Cookie', `takeaway_auth=${signedCookie}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Lax`)
-
+    // No authentication state: return created user
     res.json({
       success: true,
       message: "Registration successful",
@@ -325,10 +242,11 @@ app.post("/api/auth/register", (req, res) => {
   }
 })
 
-app.get("/api/auth/verify", authenticateSession, (req, res) => {
+app.get("/api/auth/verify", (req, res) => {
+  // Authentication removed: return default speaker info
   res.json({
     success: true,
-    user: req.user,
+    user: SPEAKERS[0],
   })
 })
 
@@ -374,7 +292,7 @@ async function saveMetadataToBlob() {
 
 loadMetadataFromBlob()
 
-app.post("/api/event/generate-link", authenticateSession, async (req, res) => {
+app.post("/api/event/generate-link", async (req, res) => {
   try {
     const linkToken = randomBytes(32).toString("hex")
     currentEvent.shareableLink = linkToken
@@ -400,7 +318,7 @@ app.post("/api/event/generate-link", authenticateSession, async (req, res) => {
   }
 })
 
-app.get("/api/event/shareable-link", authenticateSession, (req, res) => {
+app.get("/api/event/shareable-link", (req, res) => {
   if (!currentEvent.shareableLink) {
     return res.status(404).json({ error: "No shareable link generated yet" })
   }
@@ -420,7 +338,7 @@ app.get("/api/event/shareable-link", authenticateSession, (req, res) => {
   })
 })
 
-app.post("/api/event/configure", authenticateSession, async (req, res) => {
+app.post("/api/event/configure", async (req, res) => {
   try {
     const { name, startDate, endDate, isActive } = req.body
 
@@ -446,7 +364,7 @@ app.post("/api/event/configure", authenticateSession, async (req, res) => {
   }
 })
 
-app.post("/api/upload", authenticateSession, upload.single("file"), async (req, res) => {
+app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" })
@@ -475,7 +393,7 @@ app.post("/api/upload", authenticateSession, upload.single("file"), async (req, 
       size: req.file.size,
       mimetype: req.file.mimetype,
       uploadDate: new Date().toISOString(),
-      uploadedBy: req.user.id,
+  uploadedBy: 'anonymous',
       summary: summaryData.summary,
       readingTime: summaryData.readingTime,
       fileType: summaryData.fileType,
